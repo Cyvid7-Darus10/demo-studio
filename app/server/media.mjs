@@ -9,6 +9,10 @@ const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.woff2': 'font/woff2', '.ico': 'image/x-icon',
 };
+// Demo folders come from other people, so /media/ only serves passive types inline. HTML, SVG or
+// script from a demo folder would run on the editor's origin and could call its local API.
+const PASSIVE = new Set(['.mp4', '.mov', '.png', '.jpg', '.jpeg', '.aiff', '.txt']);
+const MEDIA_HEADERS = { 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "sandbox; default-src 'none'" };
 const THUMB_CACHE_LIMIT = 400;
 const THUMB_WORKERS = 3;
 
@@ -17,11 +21,20 @@ export function contentType(file) {
 }
 
 // Byte-range responses, so <video> can seek without downloading the whole take.
-export function sendFile(req, res, file) {
+export function isPassiveMedia(file) {
+  return PASSIVE.has(extname(file).toLowerCase());
+}
+
+export function sendFile(req, res, file, { untrusted = false } = {}) {
   const { size } = statSync(file);
-  const type = contentType(file);
+  const passive = isPassiveMedia(file);
+  const type = untrusted && !passive ? 'application/octet-stream' : contentType(file);
   const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '');
-  const headers = { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-cache' };
+  let headers = { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-cache' };
+  if (untrusted) {
+    headers = { ...headers, ...MEDIA_HEADERS };
+    if (!passive) headers = { ...headers, 'Content-Disposition': `attachment; filename="${basename(file).replace(/"/g, '')}"` };
+  }
   if (!range) {
     res.writeHead(200, { ...headers, 'Content-Length': size });
     if (req.method === 'HEAD') return res.end();

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { formatJson } from '../shared/format.mjs';
 import { DocumentStore, hashText, readDocument, SaveError } from './documents.mjs';
-import { parseCsv } from './media.mjs';
+import { isPassiveMedia, parseCsv, sendFile } from './media.mjs';
 import { insideAny, PathError, resolveInside } from './paths.mjs';
 import { renderCommand } from './render.mjs';
 
@@ -136,5 +136,38 @@ describe('takes.csv', () => {
   it('reads quoted notes with commas and quotes', () => {
     const rows = parseCsv('file,scene,status,notes\nraw/a-t1.mp4,a,keep,"slow, then ""fast"""\n');
     expect(rows).toEqual([{ file: 'raw/a-t1.mp4', scene: 'a', status: 'keep', notes: 'slow, then "fast"' }]);
+  });
+});
+
+describe('serving demo-folder files', () => {
+  function fakeRes() {
+    const res = { status: 0, headers: {}, writeHead(status, headers) { res.status = status; res.headers = headers; }, end() {} };
+    return res;
+  }
+
+  it('serves video and images inline, sandboxed', () => {
+    writeFileSync(join(dir, 'take.mp4'), 'x');
+    const res = fakeRes();
+    sendFile({ method: 'HEAD', headers: {} }, res, join(dir, 'take.mp4'), { untrusted: true });
+    expect(res.headers['Content-Type']).toBe('video/mp4');
+    expect(res.headers['X-Content-Type-Options']).toBe('nosniff');
+    expect(res.headers['Content-Security-Policy']).toMatch(/sandbox/);
+    expect(res.headers['Content-Disposition']).toBeUndefined();
+  });
+
+  it('never serves HTML, SVG or script from a demo folder as a page', () => {
+    for (const name of ['evil.html', 'logo.svg', 'x.js']) {
+      writeFileSync(join(dir, name), '<script>alert(1)</script>');
+      const res = fakeRes();
+      sendFile({ method: 'HEAD', headers: {} }, res, join(dir, name), { untrusted: true });
+      expect(res.headers['Content-Type']).toBe('application/octet-stream');
+      expect(res.headers['Content-Disposition']).toMatch(/^attachment/);
+    }
+  });
+
+  it('opens only media and text in their app; anything else is revealed', () => {
+    expect(isPassiveMedia('a/b.mp4')).toBe(true);
+    expect(isPassiveMedia('a/b.PNG')).toBe(true);
+    for (const name of ['run.command', 'x.app', 'evil.html', 'tool.sh']) expect(isPassiveMedia(name)).toBe(false);
   });
 });

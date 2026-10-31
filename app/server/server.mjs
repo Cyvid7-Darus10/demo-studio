@@ -5,7 +5,7 @@ import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DocumentStore, FILES, readDocument, SaveError } from './documents.mjs';
 import { isDemoFolder, listDemos } from './demos.mjs';
-import { mediaIndex, sendFile, thumbnail } from './media.mjs';
+import { isPassiveMedia, mediaIndex, sendFile, thumbnail } from './media.mjs';
 import { insideAny, PathError, resolveInside } from './paths.mjs';
 import { RenderRunner } from './render.mjs';
 
@@ -169,7 +169,8 @@ export function createStudio({ repo, cwd, folder: initialFolder, dev = false }) 
       const { path, action } = await readBody(req);
       const real = insideAny([requireFolder()], String(path ?? ''));
       if (!real) throw new HttpError(403, 'only files inside the demo folder can be opened');
-      openWith(real, action === 'reveal');
+      // Only media and text open in their app; anything else (scripts, apps) is shown in the folder instead.
+      openWith(real, action === 'reveal' || !isPassiveMedia(real));
       return json(res, 200, { ok: true });
     }
     if (route === 'GET /api/events') {
@@ -213,7 +214,7 @@ export function createStudio({ repo, cwd, folder: initialFolder, dev = false }) 
     if (url.pathname.startsWith('/api/')) return api(req, res, url);
     if (url.pathname.startsWith('/media/')) {
       const rel = decodeURIComponent(url.pathname.slice('/media/'.length));
-      return sendFile(req, res, resolveInside(requireFolder(), rel));
+      return sendFile(req, res, resolveInside(requireFolder(), rel), { untrusted: true });
     }
     return serveUi(req, res, url);
   }
