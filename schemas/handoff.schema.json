@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "demo-studio/handoff.schema.json",
+  "title": "handoff.json",
+  "description": "The editor handoff: videos made of scenes made of shots cut from raw takes, plus title cards, voiceover, brand, source-footage parts and social versions. Read by build-handoff.py, title-cards.mjs and social-cut.py. Paths are relative to handoff.json.",
+  "type": "object",
+  "required": ["title", "videos"],
+  "additionalProperties": false,
+  "patternProperties": { "^_": {} },
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "description": "Demo name, used in file headers and the zip name." },
+    "paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "raw": { "type": "string", "description": "Raw takes. Default recordings/raw." },
+        "out": { "type": "string", "description": "Handoff folder. Default recordings/editor-handoff." },
+        "cards": { "type": "string", "description": "Title card PNGs. Default <out>/assets/title-cards." }
+      }
+    },
+    "voice": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rate_wpm": { "type": "number", "exclusiveMinimum": 0, "description": "Words per minute for the fit check. Default 165." },
+        "lead_in": { "type": "number", "minimum": 0, "description": "Seconds into a scene before its line starts. Default 0.3." },
+        "say_voice": { "type": "string", "description": "macOS say voice for the timing preview. Default: system voice." }
+      }
+    },
+    "brand": { "$ref": "#/$defs/brand" },
+    "cards": {
+      "type": "object",
+      "description": "Card name (card-...) to its wording. title-cards.mjs renders each one.",
+      "patternProperties": { "^card-[a-z0-9-]+$": { "$ref": "#/$defs/cardText" } },
+      "additionalProperties": false
+    },
+    "shots": {
+      "type": "object",
+      "description": "Named shots that scenes can reuse with {\"ref\": NAME}, so both videos share in and out points.",
+      "additionalProperties": { "$ref": "#/$defs/clip" }
+    },
+    "videos": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/video" } },
+    "parts": {
+      "type": "object",
+      "description": "source-footage folder name to the raw take file names or prefixes it holds.",
+      "additionalProperties": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+    },
+    "brief": { "$ref": "#/$defs/brief" },
+    "social": { "type": "array", "items": { "$ref": "#/$defs/social" } },
+    "reference_files": {
+      "type": "array",
+      "description": "Extra files copied into reference/ (review reel, style references).",
+      "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "brand": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "background": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "title_color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "subtitle_color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "accent": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "font": { "type": "string", "description": "CSS font-family list. Use single quotes inside." },
+        "logo": { "type": "string", "description": "Logo path (PNG or SVG)." },
+        "spelling": { "type": "array", "items": { "type": "string" }, "description": "Names and how to write them." },
+        "taglines": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "cardText": {
+      "type": "object",
+      "required": ["title"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "logo": { "type": "boolean", "description": "Show brand.logo above the title." },
+        "people": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "role": { "type": "string" },
+              "photo": { "type": "string", "description": "Headshot path; drawn as a circle." }
+            }
+          }
+        }
+      }
+    },
+    "clip": {
+      "type": "object",
+      "required": ["source", "in", "out", "screen"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "pattern": "\\.(mp4|mov)$", "description": "Raw take file name in paths.raw." },
+        "in": { "type": "number", "minimum": 0 },
+        "out": { "type": "number", "exclusiveMinimum": 0 },
+        "speed": { "type": "number", "exclusiveMinimum": 0, "description": "1 is real time. Default 1." },
+        "screen": { "type": "string", "description": "What is on screen, for the script." },
+        "text": { "type": "string", "description": "On-screen text the editor adds." }
+      }
+    },
+    "cardShot": {
+      "type": "object",
+      "required": ["card", "length"],
+      "additionalProperties": false,
+      "properties": {
+        "card": { "type": "string", "pattern": "^card-[a-z0-9-]+$" },
+        "length": { "type": "number", "exclusiveMinimum": 0 },
+        "screen": { "type": "string" },
+        "text": { "type": "string" }
+      }
+    },
+    "refShot": {
+      "type": "object",
+      "required": ["ref"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": { "type": "string", "description": "Name in the top-level shots map. Other fields override it." },
+        "in": { "type": "number", "minimum": 0 },
+        "out": { "type": "number", "exclusiveMinimum": 0 },
+        "speed": { "type": "number", "exclusiveMinimum": 0 },
+        "screen": { "type": "string" },
+        "text": { "type": "string" }
+      }
+    },
+    "shot": { "oneOf": [{ "$ref": "#/$defs/clip" }, { "$ref": "#/$defs/cardShot" }, { "$ref": "#/$defs/refShot" }] },
+    "scene": {
+      "type": "object",
+      "required": ["name", "shots"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "voiceover": { "type": "string", "description": "The line read over this scene. Spoken English, no symbols." },
+        "shots": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/shot" } }
+      }
+    },
+    "video": {
+      "type": "object",
+      "required": ["key", "scenes"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "pattern": "^[A-Z][A-Z0-9-]*$", "description": "PROMO, HOW-TO, ..." },
+        "title": { "type": "string" },
+        "label": { "type": "string", "description": "Short label for the brief, for example 'the story'." },
+        "script_file": { "type": "string" },
+        "voiceover_file": { "type": "string" },
+        "scenes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/scene" } }
+      }
+    },
+    "brief": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Wording for 1-READ-ME-FIRST.txt.",
+      "properties": {
+        "summary": { "type": "string" },
+        "style_reference": { "type": "string" },
+        "people": {
+          "type": "array",
+          "items": {
+            "type": "object", "required": ["name", "role"], "additionalProperties": false,
+            "properties": { "name": { "type": "string" }, "role": { "type": "string" } }
+          }
+        },
+        "glossary": {
+          "type": "array",
+          "items": {
+            "type": "object", "required": ["term", "meaning"], "additionalProperties": false,
+            "properties": { "term": { "type": "string" }, "meaning": { "type": "string" } }
+          }
+        },
+        "edit_notes": { "type": "array", "items": { "type": "string" } },
+        "fixes": { "type": "array", "items": { "type": "string" } },
+        "do_not_say": { "type": "array", "items": { "type": "string" } },
+        "claims": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "caption": {
+      "type": "object",
+      "required": ["start", "end"],
+      "additionalProperties": false,
+      "properties": {
+        "start": { "type": "number", "minimum": 0 },
+        "end": { "type": "number", "exclusiveMinimum": 0 },
+        "text": { "type": "string" },
+        "png": { "type": "string", "description": "Pre-rendered caption band PNG, full output width." }
+      }
+    },
+    "social": {
+      "type": "object",
+      "required": ["aspect"],
+      "additionalProperties": false,
+      "properties": {
+        "video": { "type": "string", "description": "Video key; its rough assembly is the input." },
+        "input": { "type": "string", "description": "Any 16:9 file instead of a video key." },
+        "output": { "type": "string" },
+        "aspect": { "enum": ["4:5", "9:16"] },
+        "fill": { "enum": ["blur", "color"], "description": "Background: blurred footage or a flat colour. Default blur." },
+        "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "fit": { "enum": ["contain", "crop"], "description": "contain shows the whole frame; crop fills a taller window around focus. Default contain." },
+        "focus_x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "focus_y": { "type": "number", "minimum": 0, "maximum": 1 },
+        "zoom": { "type": "number", "minimum": 1 },
+        "radius": { "type": "integer", "minimum": 0 },
+        "captions": { "type": "array", "items": { "$ref": "#/$defs/caption" } }
+      }
+    }
+  }
+}

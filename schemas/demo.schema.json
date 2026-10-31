@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "demo-studio/demo.schema.json",
+  "title": "demo.json",
+  "description": "The keynote cut: title cards and scenes in story order. Read by build-keynote.py, mk-assets.py, keynote-handoff.py and rec.mjs.",
+  "type": "object",
+  "required": ["title", "sequence"],
+  "additionalProperties": false,
+  "patternProperties": { "^_": {} },
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "description": "Product name, short. Also names the output file." },
+    "logo": { "type": "string", "description": "Logo path relative to demo.json (PNG or SVG). Empty for none." },
+    "browser": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Recording context options for rec.mjs (mk-setup.sh reads DEMO_TIMEZONE and DEMO_LOCALE instead).",
+      "properties": {
+        "timezone": { "type": "string", "description": "IANA zone, for example Europe/London." },
+        "locale": { "type": "string", "description": "For example en-GB." }
+      }
+    },
+    "windows": {
+      "type": "object",
+      "description": "Named Chrome windows for multi-window recording with rec.mjs and run.mjs.",
+      "additionalProperties": { "$ref": "#/$defs/window" }
+    },
+    "sequence": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/item" } }
+  },
+  "$defs": {
+    "window": {
+      "type": "object",
+      "required": ["port"],
+      "additionalProperties": false,
+      "properties": {
+        "port": { "type": "integer", "minimum": 1024, "maximum": 65535, "description": "Chrome remote debugging port." },
+        "match": { "type": "string", "description": "URL part of the tab to drive. Defaults to the first tab." },
+        "rx_port": { "type": "integer", "minimum": 1024, "maximum": 65535, "description": "Frame receiver port for this window, so two windows can record at once." }
+      }
+    },
+    "item": { "oneOf": [{ "$ref": "#/$defs/card" }, { "$ref": "#/$defs/scene" }] },
+    "card": {
+      "type": "object",
+      "required": ["card", "title"],
+      "additionalProperties": false,
+      "patternProperties": { "^_": {} },
+      "properties": {
+        "card": { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "Card name; renders card-<name>.png." },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "logo": { "type": "boolean" },
+        "duration": { "type": "number", "exclusiveMinimum": 0, "description": "Seconds, default 2.4." },
+        "voiceover": { "type": "string" }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "required": ["scene", "stem"],
+      "additionalProperties": false,
+      "patternProperties": { "^_": {} },
+      "properties": {
+        "scene": { "type": "string", "pattern": "^[0-9]{2}[a-z]?$", "description": "Scene id, for example 03 or 03b." },
+        "stem": { "type": "string", "pattern": "^[0-9]{2}[a-z]?-[a-z0-9-]+$", "description": "Raw take stem: recordings/raw/<stem>-t<take>.mp4." },
+        "take": { "type": "integer", "minimum": 1 },
+        "caption": { "type": "string" },
+        "speed": { "type": "number", "exclusiveMinimum": 0 },
+        "trim": {
+          "type": "array", "minItems": 2, "maxItems": 2,
+          "items": { "type": ["number", "null"] },
+          "description": "[in, out] seconds of the raw take; null keeps that end."
+        },
+        "zoom": {
+          "type": "array", "minItems": 5, "maxItems": 5,
+          "items": { "type": "number" },
+          "description": "[factor, centerX, centerY, startSec, durationSec] in 1920x1080 output coordinates."
+        },
+        "voiceover": { "type": "string" }
+      }
+    }
+  }
+}
