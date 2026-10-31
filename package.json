@@ -5,9 +5,15 @@
   "description": "Product demo video pipeline packaged as a Claude Code plugin.",
   "license": "UNLICENSED",
   "engines": { "node": ">=20" },
+  "workspaces": ["app"],
+  "bin": { "demo-studio": "app/bin/demo-studio.mjs" },
   "scripts": {
     "doctor": "bash scripts/doctor.sh",
-    "test": "bash tests/smoke.sh"
+    "test": "bash tests/smoke.sh",
+    "studio": "node app/bin/demo-studio.mjs",
+    "studio:dev": "npm run dev -w app",
+    "test:app": "npm test -w app",
+    "test:e2e": "npm run e2e -w app"
   },
   "dependencies": {
     "playwright-core": "1.56.1"

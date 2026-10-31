@@ -1,0 +1,164 @@
+// End-to-end check of the editor against a temp copy of examples/acme-invoice-bot with synthetic
+// takes: open, trim (plain and shared shots), play, 9:16 framing, an outside edit, and a title-card
+// render. Usage: npm run e2e -w app
+import assert from 'node:assert/strict';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { exampleCopy, launch, startServer } from './harness.mjs';
+
+const results = [];
+async function step(name, fn) {
+  const started = Date.now();
+  await fn();
+  results.push(name);
+  console.log(`  ok  ${name} (${Date.now() - started} ms)`);
+}
+
+const readHandoff = (folder) => JSON.parse(readFileSync(join(folder, 'handoff.json'), 'utf8'));
+
+async function waitFor(check, what, timeout = 10000) {
+  const end = Date.now() + timeout;
+  for (;;) {
+    const value = await check();
+    if (value) return value;
+    if (Date.now() > end) throw new Error(`timed out waiting for ${what}`);
+    await new Promise((r) => setTimeout(r, 150));
+  }
+}
+
+async function dragHandle(page, shotId, side, dx) {
+  const handle = page.locator(`[data-shot-id="${shotId}"] [data-testid="handle-${side}"]`);
+  const box = await handle.boundingBox();
+  assert.ok(box, `handle ${side} of ${shotId} is visible`);
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (let i = 1; i <= 5; i += 1) await page.mouse.move(x + (dx * i) / 5, y);
+  await page.mouse.up();
+}
+
+const { folder, cleanup } = exampleCopy();
+let server;
+let browser;
+try {
+  server = await startServer(folder);
+  browser = await launch();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+
+  await step('opens the example', async () => {
+    await page.goto(server.url);
+    await page.waitForSelector('[data-testid="shot"]');
+    assert.equal(await page.locator('[data-testid="shot"]').count(), 7);
+    assert.equal(await page.locator('[data-testid="vo-bar"]').count(), 5);
+  });
+
+  await step('trims a plain clip and saves handoff.json', async () => {
+    await page.click('[data-testid="video-tab-HOW-TO"]');
+    const before = readHandoff(folder).videos[1].scenes[1].shots[1].out;
+    await dragHandle(page, '1:1:1', 'right', -60);
+    const after = await waitFor(() => {
+      const out = readHandoff(folder).videos[1].scenes[1].shots[1].out;
+      return out < before ? out : null;
+    }, 'handoff.json to change');
+    assert.ok(after >= 0.8 && after < before, `out moved from ${before} to ${after}`);
+    assert.equal(readHandoff(folder)._comment.startsWith('Fictional example'), true, '_comment kept');
+  });
+
+  await step('trims a shared shot for this video only', async () => {
+    await page.click('[data-testid="video-tab-PROMO"]');
+    await dragHandle(page, '0:0:1', 'right', -40);
+    await page.click('[data-testid="ref-override"]');
+    const shot = await waitFor(() => {
+      const s = readHandoff(folder).videos[0].scenes[0].shots[1];
+      return s.out !== undefined ? s : null;
+    }, 'the override to be saved');
+    assert.equal(shot.ref, 'THREAD');
+    assert.ok(shot.out < 9);
+    assert.equal(readHandoff(folder).shots.THREAD.out, 9, 'shared shot untouched');
+  });
+
+  await step('plays and the video time advances', async () => {
+    await page.locator('[data-shot-id="0:1:0"]').click();
+    const start = await page.evaluate(() => {
+      const v = [...document.querySelectorAll('video')].find((e) => e.style.visibility === 'visible');
+      return v ? v.currentTime : -1;
+    });
+    await page.click('[data-testid="play"]');
+    await page.waitForTimeout(1200);
+    const now = await page.evaluate(() => {
+      const v = [...document.querySelectorAll('video')].find((e) => e.style.visibility === 'visible');
+      return v ? v.currentTime : -1;
+    });
+    await page.keyboard.press('k');
+    assert.ok(start >= 0, 'a video is showing');
+    assert.ok(now > start + 0.5, `currentTime went from ${start} to ${now}`);
+    const tc = await page.textContent('[data-testid="timecode"]');
+    assert.notEqual(tc?.split('/')[0].trim(), '0:00.00');
+  });
+
+  await step('frames 9:16 like social-cut.py', async () => {
+    await page.click('[data-testid="aspect-9x16"]');
+    const stage = await page.locator('[data-testid="stage"]').evaluate((el) => ({ w: el.style.width, h: el.style.height }));
+    assert.deepEqual(stage, { w: '1080px', h: '1920px' });
+    // PROMO 9:16 in the example: contain, so a 1000x562 window at (40, 759) under a 420px band.
+    const win = await page.locator('[data-testid="window"]').evaluate((el) => [el.style.left, el.style.top, el.style.width, el.style.height]);
+    assert.deepEqual(win, ['40px', '759px', '1000px', '562px']);
+    assert.equal(await page.locator('[data-testid="caption-band"]').evaluate((el) => el.style.height), '420px');
+    await page.click('[data-testid="aspect-16x9"]');
+  });
+
+  await step('reloads after an outside edit', async () => {
+    const doc = readHandoff(folder);
+    writeFileSync(join(folder, 'handoff.json'), JSON.stringify({ ...doc, title: 'Edited by Claude' }, null, 2));
+    await page.waitForSelector('[data-testid="toast"]:has-text("changed outside the app")', { timeout: 5000 });
+  });
+
+  await step('renders title cards with progress and output', async () => {
+    await page.click('[data-testid="render-button"]');
+    await page.click('[data-testid="render-cards"]');
+    await page.waitForSelector('[data-testid="render-drawer"][data-status="done"]', { timeout: 60000 });
+    const progress = await page.textContent('[data-testid="render-drawer"] .muted');
+    assert.match(progress ?? '', /title-cards 5\/5/);
+    const loaded = await page.locator('[data-testid="render-output"] img').first().evaluate((img) => img.complete && img.naturalWidth);
+    assert.equal(loaded, 1920, 'the rendered card loads in the drawer');
+    assert.ok(existsSync(join(folder, 'recordings/editor-handoff/assets/title-cards/card-open.png')));
+    // The preview now uses the rendered PNG for cards.
+    await page.locator('[data-shot-id="0:0:0"]').click();
+    await page.waitForSelector('[data-testid="window"] img');
+  });
+
+  await step('quick preview renders the current video at 960x540', async () => {
+    await page.click('[data-testid="render-button"]');
+    await page.click('[data-testid="render-quick"]');
+    await page.waitForSelector('[data-testid="render-drawer"][data-status="done"]', { timeout: 60000 });
+    const size = await page.locator('[data-testid="render-output"] video').evaluate((v) => new Promise((resolve) => {
+      if (v.videoWidth) resolve([v.videoWidth, v.videoHeight]);
+      v.addEventListener('loadedmetadata', () => resolve([v.videoWidth, v.videoHeight]), { once: true });
+      v.addEventListener('error', () => resolve(['error', v.error?.message]), { once: true });
+      setTimeout(() => resolve(['timeout', v.currentSrc]), 8000);
+    }));
+    assert.deepEqual(size, [960, 540]);
+  });
+
+  await step('cancels a running render', async () => {
+    await page.click('[data-testid="render-button"]');
+    await page.click('[data-testid="render-handoff"]');
+    await page.waitForSelector('[data-testid="render-drawer"][data-status="running"]');
+    await page.click('[data-testid="render-drawer"] button:has-text("Cancel")');
+    await page.waitForSelector('[data-testid="render-drawer"][data-status="cancelled"]', { timeout: 10000 });
+  });
+
+  assert.deepEqual(errors, [], `no page errors: ${errors.join('; ')}`);
+  console.log(`\ne2e passed (${results.length} steps)`);
+} catch (error) {
+  console.error(`\ne2e FAILED: ${error.message}`);
+  if (server) console.error(`server log:\n${server.log()}`);
+  process.exitCode = 1;
+} finally {
+  await browser?.close().catch(() => {});
+  server?.stop();
+  cleanup();
+}

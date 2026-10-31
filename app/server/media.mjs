@@ -1,0 +1,166 @@
+import { spawn } from 'node:child_process';
+import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { basename, extname, join, relative } from 'node:path';
+
+const TYPES = {
+  '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.png': 'image/png', '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml', '.txt': 'text/plain; charset=utf-8',
+  '.json': 'application/json', '.aiff': 'audio/aiff', '.zip': 'application/zip',
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
+  '.woff2': 'font/woff2', '.ico': 'image/x-icon',
+};
+const THUMB_CACHE_LIMIT = 400;
+const THUMB_WORKERS = 3;
+
+export function contentType(file) {
+  return TYPES[extname(file).toLowerCase()] ?? 'application/octet-stream';
+}
+
+// Byte-range responses, so <video> can seek without downloading the whole take.
+export function sendFile(req, res, file) {
+  const { size } = statSync(file);
+  const type = contentType(file);
+  const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '');
+  const headers = { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-cache' };
+  if (!range) {
+    res.writeHead(200, { ...headers, 'Content-Length': size });
+    if (req.method === 'HEAD') return res.end();
+    return createReadStream(file).pipe(res);
+  }
+  let start = range[1] === '' ? size - Number(range[2]) : Number(range[1]);
+  let end = range[1] !== '' && range[2] !== '' ? Number(range[2]) : size - 1;
+  start = Math.max(0, start);
+  end = Math.min(end, size - 1);
+  if (start > end || Number.isNaN(start)) {
+    res.writeHead(416, { 'Content-Range': `bytes */${size}` });
+    return res.end();
+  }
+  res.writeHead(206, { ...headers, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': end - start + 1 });
+  if (req.method === 'HEAD') return res.end();
+  return createReadStream(file, { start, end }).pipe(res);
+}
+
+function run(cmd, args, { binary = false } = {}) {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const out = [];
+    let err = '';
+    child.stdout.on('data', (chunk) => out.push(chunk));
+    child.stderr.on('data', (chunk) => { err += chunk; });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code) reject(new Error(`${cmd} exited ${code}: ${err.slice(-400)}`));
+      else resolvePromise(binary ? Buffer.concat(out) : Buffer.concat(out).toString('utf8'));
+    });
+  });
+}
+
+const durations = new Map();
+export async function probeDuration(file) {
+  const key = `${file}:${statSync(file).mtimeMs}`;
+  if (durations.has(key)) return durations.get(key);
+  try {
+    const out = await run('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file]);
+    const value = Number.parseFloat(out.trim());
+    const result = Number.isFinite(value) ? value : null;
+    durations.set(key, result);
+    return result;
+  } catch (error) {
+    console.error(`studio: ffprobe failed for ${basename(file)}: ${error.message}`);
+    return null;
+  }
+}
+
+const thumbs = new Map();
+const queue = [];
+let active = 0;
+function pump() {
+  while (active < THUMB_WORKERS && queue.length) {
+    const job = queue.shift();
+    active += 1;
+    job().finally(() => {
+      active -= 1;
+      pump();
+    });
+  }
+}
+
+export function thumbnail(file, seconds, width) {
+  const key = `${file}:${statSync(file).mtimeMs}:${seconds.toFixed(2)}:${width}`;
+  if (thumbs.has(key)) return thumbs.get(key);
+  const promise = new Promise((resolvePromise, reject) => {
+    queue.push(() => run('ffmpeg', ['-v', 'error', '-ss', String(seconds), '-i', file, '-frames:v', '1',
+      '-vf', `scale=${width}:-2`, '-f', 'image2pipe', '-c:v', 'mjpeg', '-q:v', '5', '-'], { binary: true })
+      .then(resolvePromise, reject));
+    pump();
+  });
+  thumbs.set(key, promise);
+  promise.catch(() => thumbs.delete(key));
+  if (thumbs.size > THUMB_CACHE_LIMIT) thumbs.delete(thumbs.keys().next().value);
+  return promise;
+}
+
+// A tiny CSV reader for takes.csv (quoted fields, doubled quotes).
+export function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let quoted = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i += 1; }
+      else if (c === '"') quoted = false;
+      else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i += 1;
+      row.push(field); rows.push(row); row = []; field = '';
+    } else field += c;
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  const [header, ...body] = rows.filter((r) => r.some((v) => v.trim()));
+  if (!header) return [];
+  return body.map((r) => Object.fromEntries(header.map((h, i) => [h.trim(), (r[i] ?? '').trim()])));
+}
+
+function takeStatuses(folder) {
+  const csv = join(folder, 'recordings', 'takes.csv');
+  if (!existsSync(csv)) return new Map();
+  const statuses = new Map();
+  for (const row of parseCsv(readFileSync(csv, 'utf8'))) {
+    if (row.file) statuses.set(basename(row.file), { status: row.status ?? '', notes: row.notes ?? '' });
+  }
+  return statuses;
+}
+
+function pngs(folder, dir, strip) {
+  const out = {};
+  if (!existsSync(dir)) return out;
+  for (const name of readdirSync(dir)) {
+    if (name.endsWith('.png') && name.startsWith('card-')) {
+      out[strip ? name.slice(5, -4) : name.slice(0, -4)] = relative(folder, join(dir, name));
+    }
+  }
+  return out;
+}
+
+export async function mediaIndex(folder, handoff) {
+  const rawDir = join(folder, handoff?.paths?.raw ?? 'recordings/raw');
+  const outDir = join(folder, handoff?.paths?.out ?? 'recordings/editor-handoff');
+  const cardsDir = handoff?.paths?.cards ? join(folder, handoff.paths.cards) : join(outDir, 'assets', 'title-cards');
+  const statuses = takeStatuses(folder);
+  const files = existsSync(rawDir) ? readdirSync(rawDir).filter((f) => /\.(mp4|mov)$/i.test(f)).sort() : [];
+  const raw = await Promise.all(files.map(async (file) => ({
+    file,
+    path: relative(folder, join(rawDir, file)),
+    duration: await probeDuration(join(rawDir, file)),
+    ...(statuses.get(file) ?? {}),
+  })));
+  return {
+    raw,
+    cards: pngs(folder, cardsDir, false),
+    keynoteCards: pngs(folder, join(folder, 'recordings', 'exports', '.keynote'), true),
+  };
+}
