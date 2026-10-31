@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # End-to-end smoke test on synthetic footage: scaffold, frame receiver, encode, QA sheets, keynote cut,
-# review reel, editor handoff (promo + how-to), social versions, scene wrappers.
+# review reel, editor handoff (promo + how-to), quick preview, social versions, scene wrappers.
 # Needs ffmpeg with libx264, python3 and node. Uses real Chrome for title cards when playwright-core
 # and Chrome are installed, else placeholder PNGs. macOS `say` is used when present.
 # Usage: bash tests/smoke.sh        (KEEP=1 keeps the temp folder)
@@ -38,7 +38,7 @@ ffmpeg -hide_banner -encoders 2>/dev/null | grep -q libx264 || die "ffmpeg lacks
 
 step "syntax"
 for f in "$S"/*.py; do python3 -m py_compile "$f"; done; ok "python scripts compile"
-for f in "$S"/*.mjs; do node --check "$f"; done; ok "node scripts parse"
+for f in "$S"/*.mjs "$ROOT"/app/server/*.mjs "$ROOT"/app/bin/*.mjs "$ROOT"/app/scripts/*.mjs; do node --check "$f"; done; ok "node scripts parse"
 for f in "$S"/*.sh "$ROOT"/tests/*.sh; do bash -n "$f"; done; ok "shell scripts parse"
 
 step "schemas"
@@ -177,6 +177,11 @@ python3 -m zipfile -l "$R/acme-invoice-bot-editor-handoff.zip" | grep -q 'editor
 ok "zip holds READ-ME-FIRST"
 EM="$(printf '\342\200\224')"
 if grep -q "$EM" "$H"/*.txt; then die "em dash in generated text"; fi; ok "no em dashes in generated text"
+
+step "quick preview (the editor's fast render)"
+(cd "$D" && python3 -I "$S/quick-preview.py" handoff.json PROMO > "$TMP/quick.log")
+grep -q '^OUTPUT .*PROMO-quick-preview.mp4' "$TMP/quick.log" || die "no OUTPUT from quick-preview"; ok "quick-preview prints OUTPUT"
+size_is "$R/exports/PROMO-quick-preview.mp4" 960x540; fps_is "$R/exports/PROMO-quick-preview.mp4"
 
 step "social-cut from the command line"
 python3 -I "$S/social-cut.py" "$CUT" "$TMP/cut-9x16.mp4" --aspect 9:16 --fit crop --focus-x 0.4 --zoom 1.2 >/dev/null
