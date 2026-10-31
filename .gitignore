@@ -1,0 +1,13 @@
+node_modules/
+demos/
+frames/
+.playwright-mcp/
+.browser-*/
+.env
+.env.*
+!.env.example
+*.mp4
+*.mov
+*.zip
+.DS_Store
+__pycache__/

@@ -1,0 +1,15 @@
+{
+  "name": "demo-studio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Product demo video pipeline packaged as a Claude Code plugin.",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "doctor": "bash scripts/doctor.sh",
+    "test": "bash tests/smoke.sh"
+  },
+  "dependencies": {
+    "playwright-core": "1.56.1"
+  }
+}

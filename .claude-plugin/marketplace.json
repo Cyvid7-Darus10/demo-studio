@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "demo-studio",
+  "description": "Internal marketplace for the demo-studio plugin.",
+  "owner": {
+    "name": "Cyrus David Pastelero"
+  },
+  "plugins": [
+    {
+      "name": "demo-studio",
+      "description": "Make product demo videos with Claude: plan, record, cut, voiceover and editor handoff.",
+      "version": "0.1.0",
+      "author": { "name": "Cyrus David Pastelero" },
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}
