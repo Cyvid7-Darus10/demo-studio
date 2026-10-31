@@ -22,6 +22,7 @@ claude --plugin-dir "$PWD"      # load your working copy instead of the installe
 | When Claude should do or ask something | the stage's `skills/<name>/SKILL.md` |
 | A tool | `scripts/`, referenced from skills as `$P/scripts/...` (`P` = `${CLAUDE_PLUGIN_ROOT}`) |
 | A new config field | `schemas/*.schema.json` first, then the script, the template and the example |
+| The local editor | `app/`; run `npm run test:app` and `npm run test:e2e`, and refresh `docs/img/` with `npm run screenshots -w app` after visible changes |
 
 Keep skills and scripts product-agnostic: no customer names, account ids, emails, internal team
 names or keychain items. Demo-specific helpers (seed, reset, answer servers) belong in the demo's
@@ -34,7 +35,7 @@ own `tools/` folder, not here.
 - Node: 20+, only `playwright-core` (imported through `scripts/pw.mjs`).
 - Shell: `set -euo pipefail`, and it must run on macOS bash 3.2 (no associative arrays, no `mapfile`).
 - Render scripts validate their config against `schemas/` before any work and print
-  `PROGRESS <stage> <done>/<total>` and `OUTPUT <path>` lines; the planned local editor reads them.
+  `PROGRESS <stage> <done>/<total>` and `OUTPUT <path>` lines; the local editor (`app/`) reads them.
 - Keep the quality defaults: raw takes CRF 14 `-preset slow`, lanczos scaling, constant 30fps, DPR 2
   capture. Change them only with a reason in the commit message.
 - Errors name the operation that failed and how to fix it. Never swallow an error.

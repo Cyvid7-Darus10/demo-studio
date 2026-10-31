@@ -33,6 +33,7 @@ We use **Playwright** (the Playwright MCP server and `playwright-core`), not Pup
 | Google Chrome | The recorded browser and the title-card renderer | `brew install --cask google-chrome` or google.com/chrome |
 | Playwright MCP | Claude drives and records the browser through it | See below |
 | `playwright-core` | Used by `rec.mjs` (multi-window recording), `run.mjs` and `title-cards.mjs` | `npm install` in the plugin folder (below) |
+| Local editor packages (optional) | The `npm run studio` editor (React, Vite, ajv); about 150 MB | The same `npm install` installs them |
 | Python 3.10+ | Edit, handoff and QA scripts; standard library only, no pip | `brew install python` |
 | ffmpeg with libx264 | All encoding | `brew install ffmpeg` |
 | 10 GB+ free disk | Raw frames take several GB per demo | |
@@ -66,7 +67,8 @@ Chrome). If you use your own Playwright MCP profile, remember it is logged in as
    /plugin install demo-studio@demo-studio
    ```
 
-3. Install `playwright-core` into the plugin folder and run the health check:
+3. Install `playwright-core` and the local editor's packages into the plugin folder, then run the
+   health check:
 
    ```bash
    P="$(ls -d ~/.claude/plugins/cache/demo-studio/demo-studio/*/ | tail -1)"
@@ -128,15 +130,80 @@ schemas/          demo.schema.json and handoff.schema.json (the config shapes th
 templates/        files new-demo.sh copies into a new demo
 references/       learnings, scene patterns, voiceover, handoff spec, secrets
 examples/         acme-invoice-bot: a small, fully filled fictional demo
+app/              local editor: React UI (src/), file and render server (server/), tests (e2e/)
 tests/smoke.sh    end-to-end test on synthetic footage
-docs/             CONTRIBUTING.md
+docs/             CONTRIBUTING.md, img/ (editor screenshots)
 ```
 
-## Local editor (coming)
+## Local editor
 
-A local browser-based editor (media bin, preview player, timeline, inspector, render button) is
-planned under `app/`, started with `npm run studio`. It will read and write the same `handoff.json`
-and `demo.json`, and stream the render scripts' `PROGRESS` and `OUTPUT` lines. TODO: not built yet.
+A local web app for reviewing and tweaking a cut without rendering. Open a demo folder, watch the
+edit play in real time, trim and reorder shots, edit on-screen text and voiceover, check the 4:5 and
+9:16 framing, then press Render to run the same scripts Claude runs.
+
+```bash
+npm install                                   # once, in the repo (or the plugin folder)
+npm run studio demos/acme                     # or: npx demo-studio demos/acme
+npm run studio                                # no folder: pick from $DEMO_ROOT (default ./demos) and examples/
+npm run studio demos/acme -- --port 4400 --no-open
+```
+
+It serves on `127.0.0.1` only (port 4317, or the next free one) and opens your browser. The first
+run builds the UI, which takes a few seconds. To try it without footage, copy the example and make
+small synthetic takes for it:
+
+```bash
+cp -R examples/acme-invoice-bot /tmp/acme && node app/scripts/example-media.mjs /tmp/acme
+npm run studio /tmp/acme
+```
+
+![The editor in the dark theme](docs/img/studio-dark-1440.png)
+
+| Light theme | 9:16 framing | Render drawer |
+| --- | --- | --- |
+| ![Light theme](docs/img/studio-light-1440.png) | ![9:16 framing](docs/img/studio-9x16-dark-1440.png) | ![Title cards rendered](docs/img/studio-render-light-1440.png) |
+
+**Layout.** Top bar: the demo, a tab per file (`handoff.json`, `demo.json`), a tab per video, the
+aspect switch, undo and redo, save status and Render. Left: raw takes (with keep, alt and reject
+from `takes.csv`), title cards and named shots; drag any of them onto the timeline. Center: the
+preview, which plays the clips in order with their in and out points and speed, draws title cards
+(the rendered PNG, or the card text in the brand colours until you render), shows on-screen text,
+and frames 4:5 and 9:16 the way `social-cut.py` does. Bottom: the timeline, with scenes, shots sized
+by their length after speed, and a voiceover lane that turns red when a line runs past the next
+narrated scene (the same estimate as `build-handoff.py --no-say`). Right: the inspector for the
+selected shot, scene, card, the video, and the brand.
+
+**Your files stay the source of truth.** The editor reads and writes `handoff.json` and `demo.json`
+directly, in the schema shape, keeping `_comment` and other `_` keys. It saves about a second after
+each edit (to a temp file, then renamed over the original), checks the file against the schema
+first and never writes an invalid one. If Claude or a text editor changes the file while it is
+open, the editor reloads it, or asks which version to keep when you have unsaved edits. Editing a
+shot that uses `{"ref": ...}` asks whether to change the shared shot (every video) or only this
+video (an override on the ref).
+
+**Render** runs `title-cards.mjs`, `build-handoff.py`, `build-keynote.py`, `review-reel.py` or
+`social-cut.py` in the demo folder, one at a time, with a progress bar, the log, the output in a
+player, and Reveal in Finder and Open buttons. Cancel stops the script and everything it started.
+**Quick preview** (`scripts/quick-preview.py`) renders the current video at 960x540 with fast
+settings, for a faithful check of speed changes and cards; the live preview stays the default.
+
+| Keys | Action |
+| --- | --- |
+| Space, K, L | Play or pause, pause, play |
+| J, Shift+Left, Shift+Right | Back 1 second, back 1 second, forward 1 second |
+| Left, Right | One frame back or forward |
+| Home, End | Start, end |
+| O | Loop the selected shot |
+| S | Split the shot at the playhead |
+| Delete | Remove the selected shot |
+| Cmd+Z, Cmd+Shift+Z | Undo, redo |
+| =, - | Zoom the timeline |
+| 1, 2, 3 | 16:9, 4:5, 9:16 |
+| ? | Show the shortcuts |
+
+Limits: the preview has no audio (raw takes have none) and does not draw the keynote cut's zooms
+or dissolves; use Quick preview or the real render for those. It is tested in Chrome, and it is
+for the same machine only, never exposed on a network.
 
 ## FAQ
 
@@ -180,7 +247,10 @@ is checked frame by frame. See `references/secrets.md`.
 ## Tests
 
 ```bash
-npm install && bash tests/smoke.sh
+npm install && bash tests/smoke.sh   # pipeline, on synthetic footage
+npm run test:app                     # editor unit tests (vitest)
+npm run test:e2e                     # editor end to end, headless Chrome on a temp copy of the example
+npm run screenshots -w app           # refresh docs/img/
 ```
 
 ## License

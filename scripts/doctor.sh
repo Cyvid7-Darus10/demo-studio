@@ -28,6 +28,10 @@ if command -v node >/dev/null 2>&1 && (cd "$root" && node -e "require.resolve('p
   ok "playwright-core $(cd "$root" && node -p "require('playwright-core/package.json').version")"
 else bad "playwright-core not installed in the plugin folder" "npm install --prefix \"$root\""; fi
 
+if command -v node >/dev/null 2>&1 && (cd "$root/app" && node -e "require.resolve('vite'); require.resolve('react'); require.resolve('ajv')" >/dev/null 2>&1); then
+  ok "local editor packages (npm run studio)"
+else warn "local editor packages not installed" "Optional, for npm run studio. Fix: npm install --prefix \"$root\""; fi
+
 if command -v python3 >/dev/null 2>&1 && python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))'; then
   ok "Python $(python3 -c 'import platform; print(platform.python_version())')"
 else bad "Python 3.10+ not found" "$(brew_or python@3.12 'install Python 3.10+ from https://www.python.org')"; fi

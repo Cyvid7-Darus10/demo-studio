@@ -92,3 +92,21 @@ python3 -I "$P/scripts/social-cut.py" recordings/exports/<slug>-keynote-cut.mp4 
 
 Watch every rough assembly end to end, check `voiceover fits`, and view a contact sheet of each social
 version for cropped-off content.
+
+## 7. Let a human review or tweak the cut (local editor)
+
+When the user or a coworker wants to watch the cut, nudge in and out points, reorder shots, reword
+on-screen text or voiceover, or check the 4:5 and 9:16 framing themselves, suggest the local editor
+instead of describing edits in chat:
+
+```bash
+npm --prefix "$P" run studio <demo-folder>        # first run: npm install --prefix "$P"
+```
+
+It plays the cut live from the raw takes (no render), and its Render menu runs these same scripts.
+It reads and writes the same `handoff.json` and `demo.json`, so:
+
+- Re-read both files before you change them; the editor may have saved edits since you last looked.
+- Your edits are safe while it is open: it reloads on change, or asks the person which version to
+  keep if they have unsaved edits. Keep writing whole, valid files.
+- It never writes a file that fails the schema, and keeps `_` keys.
