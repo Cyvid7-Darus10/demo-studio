@@ -1,0 +1,53 @@
+# Writing the voiceover
+
+The voiceover is read by an AI voice (or a person) over the finished cut. Write it like a person
+teaching a colleague, not like a caption.
+
+## Voice
+
+- Present tense, second person: "Go to Settings." "Now press Run." "Here's our thread."
+- Point at what is on screen at that moment ("this Install button") and explain why in a half
+  sentence ("so nothing sensitive ends up in the repo").
+- Open with the relatable problem, signpost each part ("First, set it up." "Now let's use it."),
+  and end with the one-line payoff and where to get it.
+- Claim only what the footage shows. If the screen does not prove it, do not say it. The brief's
+  `do_not_say` list goes to the editor too.
+- Introduce people by name and role the first time ("Meet Sam from sales").
+
+## Write for the ear
+
+- Short sentences and contractions.
+- No em dashes, parentheses, slashes, ampersands or other symbols. Use commas and periods.
+- Spell out URLs: "acme dot com slash billing".
+- Spell out amounts and numbers the way they are said: "twelve hundred dollars", "net fourteen",
+  "invoice zero zero zero six".
+- Write names as they are pronounced if the voice might trip ("Ashby and Rowe", not "Ashby & Rowe").
+
+## Timing
+
+- Budget about **2.5 words per second** of the scene the line plays over (165 words a minute).
+- A line starts 0.3s into its scene (`voice.lead_in`) and must end before the next voiced scene
+  starts. A scene without a line lets the previous line run on.
+- `build-handoff.py` checks every line. On macOS it renders each line with `say` at
+  `voice.rate_wpm` and measures it; elsewhere it estimates from the word count. It reports lines
+  that run long ("line 3 runs 9.1s but has 7.4s"). Fix by cutting words, slowing the shots
+  (lower `speed`), or holding a card longer. Never speed the voice up past natural.
+- The timing preview (`reference/<VIDEO>-VOICEOVER-TIMING-PREVIEW.mp4`) places every line with a
+  placeholder voice so the editor and the user can hear the pacing before the real voice exists.
+
+## Promo vs how-to
+
+- **Promo (about 1:30):** the story only. One idea per scene, about 8 to 12 lines in total.
+- **How-to (about 3:00):** the same story plus setup steps and an edge case. Each step names the
+  exact button or field. About 12 to 16 lines.
+
+## Client wording
+
+If the brief came with a script, use their lines exactly. Do not "improve" them. If a line does not
+fit its window or the footage cannot prove it, flag it to the user with a suggested change.
+
+## Delivery
+
+The editor gets `<n>-<VIDEO>-VOICEOVER.txt`: numbered lines with start times, then a full read in one
+block for voice tools that prefer a single take. The suggested voice is warm, relaxed and
+conversational, about 160 words a minute.

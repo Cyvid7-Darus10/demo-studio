@@ -1,0 +1,19 @@
+{
+  "_comment": "Fictional example. The keynote cut: cards and scenes in story order. See schemas/demo.schema.json.",
+  "title": "Acme Invoice Bot",
+  "logo": "",
+  "browser": { "timezone": "Europe/London", "locale": "en-GB" },
+  "windows": {
+    "riley": { "port": 9333, "match": "chat.example.com", "rx_port": 8765 },
+    "admin": { "port": 9334, "match": "billing.example.com", "rx_port": 8766 }
+  },
+  "sequence": [
+    { "card": "intro", "title": "Invoices from the thread.", "subtitle": "Acme Invoice Bot", "duration": 3.2, "voiceover": "The deal is agreed in chat. Then someone copies it into billing by hand." },
+    { "scene": "01", "stem": "01-the-thread", "take": 1, "caption": "The deal is agreed in chat.", "trim": [1.0, 9.0], "speed": 1.5 },
+    { "card": "use", "title": "Just ask.", "subtitle": "Right in the thread.", "duration": 2.4 },
+    { "scene": "04", "stem": "04-ask-bot", "take": 2, "caption": "It drafts first.", "trim": [1.0, 11.5], "speed": 1.25 },
+    { "scene": "05", "stem": "05-approve", "take": 1, "caption": "Approve. The invoice is created.", "zoom": [1.6, 1500, 600, 0.5, 1.4] },
+    { "scene": "06", "stem": "06-invoice-in-billing", "take": 1, "caption": "Same invoice, in Acme Billing.", "trim": [0.8, 9.0] },
+    { "card": "outro", "title": "Acme Invoice Bot", "subtitle": "acme.example.com", "duration": 3.8 }
+  ]
+}

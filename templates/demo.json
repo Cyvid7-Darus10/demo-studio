@@ -1,0 +1,14 @@
+{
+  "title": "Product name, short",
+  "logo": "",
+  "_comment": "sequence runs top to bottom. Cards are full-frame titles; scenes point at raw/<stem>-t<take>.mp4. zoom = [factor, centerX, centerY, startSec, durationSec] in 1920x1080 coords of the output clip; omit for a gentle 1.05 push-in. trim = [inSec, outSec] of the raw clip. speed > 1 speeds the clip up. voiceover (optional) = narration that starts 0.5s into that item and must finish before the next voiceover item; put it on a card to let it run over the card and the scenes after it.",
+  "sequence": [
+    { "card": "intro", "title": "Product in one line.", "subtitle": "What it does, in plain words.", "logo": true, "duration": 3.2, "voiceover": "You have probably been here. Describe the everyday pain in one or two sentences, then promise the fix." },
+    { "scene": "01", "stem": "01-the-problem", "take": 1, "caption": "It starts where the work happens.", "speed": 1 },
+    { "card": "setup", "title": "Set it up.", "subtitle": "The two or three tools involved.", "duration": 2.4 },
+    { "scene": "02", "stem": "02-install", "take": 1, "caption": "Install it in one click.", "speed": 1.5 },
+    { "card": "use", "title": "Then just use it.", "subtitle": "Where the user lives.", "duration": 2.4 },
+    { "scene": "03", "stem": "03-hero-moment", "take": 1, "caption": "The one thing it does best.", "speed": 1, "zoom": [1.6, 1640, 560, 0.5, 1.4] },
+    { "card": "outro", "title": "Product in one line.", "subtitle": "where-to-get-it.com", "logo": true, "duration": 3.8 }
+  ]
+}

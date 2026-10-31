@@ -1,0 +1,83 @@
+{
+  "_comment": "Fictional example. Shots name raw takes in recordings/raw; in/out are seconds of the raw take; speed > 1 speeds it up. Named shots under 'shots' are reused with {\"ref\": ...} so both videos share in and out points.",
+  "title": "Acme Invoice Bot",
+  "voice": { "rate_wpm": 165, "lead_in": 0.3 },
+  "brand": {
+    "name": "Acme",
+    "background": "#F6F6F8",
+    "title_color": "#1D1D1F",
+    "subtitle_color": "#6E6E73",
+    "accent": "#2563EB",
+    "spelling": ["Acme: one word, capital A only", "Acme Billing: two words"],
+    "taglines": ["Invoices from the thread.", "Ask in chat. Approve. Get paid."]
+  },
+  "cards": {
+    "card-open": { "title": "Acme Invoice Bot", "subtitle": "Invoices from the thread, without the copy and paste." },
+    "card-setup": { "title": "Part 1: Set it up", "subtitle": "Install the bot and add one key." },
+    "card-use": { "title": "Part 2: Use it", "subtitle": "Ask in the thread. Approve. Done." },
+    "card-edge": { "title": "Part 3: When something is missing", "subtitle": "It asks instead of guessing." },
+    "card-end": { "title": "Acme Invoice Bot", "subtitle": "Invoices from the thread." }
+  },
+  "shots": {
+    "THREAD": { "source": "01-the-thread-t1.mp4", "in": 1.0, "out": 9.0, "speed": 1.5, "screen": "A chat thread: the client signs off on the redesign, five thousand dollars flat", "text": "The deal is agreed in chat" },
+    "ASK": { "source": "04-ask-bot-t2.mp4", "in": 1.0, "out": 8.0, "speed": 1.5, "screen": "Riley mentions the bot in the thread: send an invoice to Jordan" },
+    "DRAFT": { "source": "04-ask-bot-t2.mp4", "in": 8.0, "out": 11.5, "speed": 1, "screen": "The bot replies with a draft card: Northwind Trading, USD 5,000.00, Approve / Cancel", "text": "Nothing is created yet" },
+    "APPROVE": { "source": "05-approve-t1.mp4", "in": 0.5, "out": 6.0, "speed": 1, "screen": "Riley presses Approve; the card shows Invoice INV-0006 and a payment link" },
+    "IN_BILLING": { "source": "06-invoice-in-billing-t1.mp4", "in": 0.8, "out": 9.0, "speed": 1.25, "screen": "Acme Billing, Invoices: INV-0006, Northwind Trading, USD 5,000.00, Open", "text": "Same invoice, in Acme Billing" }
+  },
+  "videos": [
+    {
+      "key": "PROMO",
+      "label": "the story: agreed in chat, invoiced in one click",
+      "title": "ACME INVOICE BOT: PROMO",
+      "scenes": [
+        { "name": "The deal is in chat", "voiceover": "The deal is agreed in chat. Then someone copies it into billing by hand.", "shots": [{ "card": "card-open", "length": 2.5, "text": "Acme Invoice Bot" }, { "ref": "THREAD" }] },
+        { "name": "Ask the bot", "voiceover": "Now just ask the bot, right in the thread. It drafts the invoice first.", "shots": [{ "ref": "ASK" }, { "ref": "DRAFT" }] },
+        { "name": "Approve", "voiceover": "Approve it, and the invoice is created.", "shots": [{ "ref": "APPROVE" }] },
+        { "name": "In billing", "voiceover": "And there it is in Acme Billing.", "shots": [{ "ref": "IN_BILLING" }] },
+        { "name": "Close", "voiceover": "Acme Invoice Bot. Invoices from the thread.", "shots": [{ "card": "card-end", "length": 4.0 }] }
+      ]
+    },
+    {
+      "key": "HOW-TO",
+      "label": "the same story, plus setup and the edge case",
+      "title": "ACME INVOICE BOT: HOW-TO",
+      "scenes": [
+        { "name": "Intro", "voiceover": "Here's how to send invoices from a chat thread with the Acme Invoice Bot.", "shots": [{ "card": "card-open", "length": 5.0 }] },
+        { "name": "Install the bot", "voiceover": "First, install the bot from the app directory and add it to your channel.", "shots": [{ "card": "card-setup", "length": 3.0 }, { "source": "02-install-bot-t1.mp4", "in": 0.8, "out": 10.0, "speed": 1.5, "screen": "App directory: search Acme, Install, pick the channel", "text": "Install once" }] },
+        { "name": "Add the key", "voiceover": "Then paste your Acme Billing key into the bot's settings. It stays blurred, and it never lands in the chat.", "shots": [{ "source": "03-add-key-t1.mp4", "in": 0.8, "out": 10.0, "speed": 1, "screen": "Bot settings: paste the billing key (blurred), Save", "text": "Your key stays private" }] },
+        { "name": "Ask in the thread", "voiceover": "Now use it. In the thread where the deal was agreed, ask the bot to send an invoice. It drafts it first, so nothing is created until you say so.", "shots": [{ "card": "card-use", "length": 3.0 }, { "ref": "THREAD", "speed": 1.25 }, { "ref": "ASK" }, { "ref": "DRAFT" }] },
+        { "name": "Approve and check", "voiceover": "Press Approve. The invoice is created with a payment link, and it's right there in Acme Billing.", "shots": [{ "ref": "APPROVE" }, { "ref": "IN_BILLING" }] },
+        { "name": "When the amount is missing", "voiceover": "If the thread has no amount, the bot asks one question instead of guessing.", "shots": [{ "card": "card-edge", "length": 3.0 }, { "source": "07-missing-amount-t1.mp4", "in": 1.0, "out": 11.0, "speed": 1.25, "screen": "No amount in the thread: the bot asks how much; Riley replies twelve hundred dollars", "text": "It asks instead of guessing" }] },
+        { "name": "Close", "voiceover": "That's the Acme Invoice Bot. Invoices from the thread.", "shots": [{ "card": "card-end", "length": 4.5 }] }
+      ]
+    }
+  ],
+  "parts": {
+    "1-the-thread": ["01-"],
+    "2-setup": ["02-", "03-"],
+    "3-ask-and-approve": ["04-", "05-"],
+    "4-proof-in-billing": ["06-"],
+    "5-edge-case": ["07-"]
+  },
+  "brief": {
+    "summary": "Two videos from one shoot. Riley (sales) asks the bot for an invoice in the thread where the deal was agreed; it drafts, Riley approves, and the invoice shows in Acme Billing.",
+    "people": [
+      { "name": "Riley Chen", "role": "sales, asks the bot" },
+      { "name": "Northwind", "role": "the client being billed (made up)" }
+    ],
+    "glossary": [
+      { "term": "thread", "meaning": "replies under one chat message" },
+      { "term": "draft card", "meaning": "the bot's preview with Approve and Cancel" }
+    ],
+    "edit_notes": ["Zoom in for phones on the draft card and on USD 5,000.00 in Acme Billing."],
+    "fixes": ["Crop the grey test-mode bar at the top of the Acme Billing screens."],
+    "do_not_say": ["That the bot sends the invoice email. It creates the invoice and a link."],
+    "claims": ["The invoice is drafted before anything is created", "Approve creates it with a payment link", "The same invoice shows in Acme Billing", "With no amount, the bot asks instead of guessing"]
+  },
+  "social": [
+    { "video": "PROMO", "aspect": "4:5", "fill": "blur", "fit": "crop", "focus_x": 0.5, "captions": [{ "start": 0, "end": 6, "text": "Invoices from the thread." }] },
+    { "video": "PROMO", "aspect": "9:16", "fill": "color", "color": "#F3F3F6", "fit": "contain" }
+  ],
+  "reference_files": []
+}

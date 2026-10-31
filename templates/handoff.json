@@ -1,0 +1,47 @@
+{
+  "_comment": "Editor handoff config. See schemas/handoff.schema.json and examples/acme-invoice-bot/handoff.json. Shots: {source, in, out, speed, screen, text} from recordings/raw, {card, length} for a title card, or {ref} to reuse a named shot. Run title-cards.mjs, then build-handoff.py.",
+  "title": "Product name",
+  "voice": { "rate_wpm": 165, "lead_in": 0.3 },
+  "brand": {
+    "name": "Product name",
+    "background": "#F6F6F8",
+    "title_color": "#1D1D1F",
+    "subtitle_color": "#6E6E73",
+    "spelling": ["Product name: how to write it"],
+    "taglines": ["The one-line promise."]
+  },
+  "cards": {
+    "card-open": { "title": "Product name", "subtitle": "What it does, in plain words." },
+    "card-end": { "title": "Product name", "subtitle": "The one-line promise." }
+  },
+  "shots": {
+    "HERO": { "source": "03-hero-moment-t1.mp4", "in": 1.0, "out": 8.0, "speed": 1, "screen": "What is on screen", "text": "On-screen text for the editor" }
+  },
+  "videos": [
+    {
+      "key": "PROMO",
+      "label": "the story",
+      "scenes": [
+        { "name": "The problem", "voiceover": "One or two spoken sentences about the everyday pain.", "shots": [{ "card": "card-open", "length": 2.5 }, { "source": "01-the-problem-t1.mp4", "in": 1.0, "out": 8.0, "speed": 1.5, "screen": "What is on screen" }] },
+        { "name": "The fix", "voiceover": "What it does, pointed at what is on screen.", "shots": [{ "ref": "HERO" }] },
+        { "name": "Close", "voiceover": "The one-line payoff and where to get it.", "shots": [{ "card": "card-end", "length": 4.0 }] }
+      ]
+    }
+  ],
+  "parts": {
+    "1-why": ["01-"],
+    "2-setup": ["02-"],
+    "3-use": ["03-"]
+  },
+  "brief": {
+    "summary": "What the videos are and who they are for.",
+    "people": [],
+    "glossary": [],
+    "edit_notes": [],
+    "fixes": [],
+    "do_not_say": [],
+    "claims": []
+  },
+  "social": [],
+  "reference_files": []
+}

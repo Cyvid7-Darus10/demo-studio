@@ -1,0 +1,50 @@
+<DEMO NAME>: EDITOR BRIEF
+=========================================================================
+(build-handoff.py writes this file from handoff.json "brief". This copy
+shows the shape, for when you need to hand-edit it.)
+
+Two videos from one shoot:
+  PROMO     1:30  the story
+  HOW-TO    3:00  the same story, plus how to set it up and the edge case
+
+Keep this look: <style reference file in reference/, or "the last video">.
+
+WHO IS IN IT
+  <Name>          <role, what they do on screen>
+
+Words used here
+  <term>          <plain meaning>
+
+HOW TO EDIT (same steps for each video)
+  1. Watch the rough assembly: PROMO_1m30/00_ROUGH-ASSEMBLY.mp4. It is
+     every clip joined in order.
+  2. Follow the script (2-PROMO-SCRIPT.txt, 4-HOW-TO-SCRIPT.txt). The
+     numbered clips are already trimmed and sped up; the script gives each
+     clip's start time and its on-screen text.
+  3. Generate the voice from 3-PROMO-VOICEOVER.txt and
+     5-HOW-TO-VOICEOVER.txt, one clip per numbered line, starting at the
+     time shown. The timing previews in reference/ place every line with a
+     placeholder voice.
+  4. Replace the card clips (card-*.png in assets/title-cards/) with
+     designed cards. The text on them is final.
+
+FIXES (please do these)
+  - <things to crop or blur, for example a test-mode banner>
+
+DO NOT SAY
+  - <claims the footage does not prove>
+
+FOLDERS
+  PROMO_1m30/         promo clips in timeline order, plus the rough assembly
+  HOW-TO_3m00/        how-to clips in timeline order, plus the rough assembly
+  source-footage/     every uncut take, grouped by story part
+  assets/             title cards, brand sheet, logo
+  reference/          voiceover timing previews, contact sheets, review reel
+  social/             vertical versions (4:5, 9:16) for feeds
+
+CLAIMS CHECKLIST (each one is shown in the footage)
+  [x] <claim>
+
+SECRETS
+  Tokens, keys and private values are blurred in the footage itself. Do not
+  sharpen or unblur those areas, and keep the blur if you re-crop or zoom.
